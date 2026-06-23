@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PantryChef — Smart Food Inventory & Recipe Recommendation App</title>
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Manage your kitchen inventory, customize ingredient difficulties, and find the closest recipes to cook based on what you have in stock using the Food Distance metric.">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <i data-lucide="chef-hat"></i>
+        </div>
+        <span class="brand-name">PantryChef</span>
+      </div>
+      <nav class="nav-menu">
+        <a href="#dashboard" class="nav-link active" data-tab="dashboard" id="nav-btn-dashboard">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#inventory" class="nav-link" data-tab="inventory" id="nav-btn-inventory">
+          <i data-lucide="package"></i>
+          <span>Inventory</span>
+        </a>
+        <a href="#recipes" class="nav-link" data-tab="recipes" id="nav-btn-recipes">
+          <i data-lucide="book-open"></i>
+          <span>Recipes</span>
+        </a>
+        <a href="#difficulty-tweak" class="nav-link" data-tab="difficulty-tweak" id="nav-btn-difficulty">
+          <i data-lucide="sliders"></i>
+          <span>Ingredient Cost</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar">S</div>
+          <div class="user-info">
+            <span class="user-name">Salem's Kitchen</span>
+            <span class="user-role">Head Chef</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top header bar -->
+      <header class="top-header">
+        <h1 class="page-title" id="page-title-text">Dashboard</h1>
+        <div class="header-actions">
+          <button class="btn btn-primary btn-add-inventory" id="header-action-btn">
+            <i data-lucide="plus"></i>
+            <span>Add Ingredient</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- TAB 1: DASHBOARD -->
+      <section id="tab-dashboard" class="tab-pane active">
+        <!-- Ambient Hero Banner -->
+        <div class="hero-banner">
+          <div class="hero-content">
+            <h2>Welcome back, Salem!</h2>
+            <p>You have ingredients for <strong id="stats-ready-count">0</strong> recipes ready to cook immediately. The closest unavailable recipe is only a short distance away!</p>
+          </div>
+          <div class="hero-glow"></div>
+        </div>
+
+        <!-- Statistics Grid -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon icon-emerald"><i data-lucide="container"></i></div>
+            <div class="stat-details">
+              <span class="stat-label">In Stock Items</span>
+              <span class="stat-value" id="stat-total-items">0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon icon-cyan"><i data-lucide="flame"></i></div>
+            <div class="stat-details">
+              <span class="stat-label">Cookable Meals</span>
+              <span class="stat-value" id="stat-cookable-count">0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon icon-violet"><i data-lucide="alert-triangle"></i></div>
+            <div class="stat-details">
+              <span class="stat-label">Expiring Soon</span>
+              <span class="stat-value text-warning" id="stat-expiring-count">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard Recommendations -->
+        <div class="dashboard-recommendations">
+          <!-- Ready to cook panel -->
+          <div class="rec-panel">
+            <div class="panel-header">
+              <h3><i data-lucide="check-circle" class="icon-emerald"></i> Ready to Cook Now</h3>
+              <span class="panel-subtitle">No ingredients missing</span>
+            </div>
+            <div class="rec-list" id="rec-ready-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Closest matches panel -->
+          <div class="rec-panel">
+            <div class="panel-header">
+              <h3><i data-lucide="compass" class="icon-violet"></i> Closest Meals (Lowest Distance)</h3>
+              <span class="panel-subtitle">Missing items sorted by acquisition difficulty</span>
+            </div>
+            <div class="rec-list" id="rec-closest-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: INVENTORY -->
+      <section id="tab-inventory" class="tab-pane">
+        <!-- Inventory Toolbar -->
+        <div class="toolbar">
+          <div class="search-box">
+            <i data-lucide="search"></i>
+            <input type="text" id="inventory-search" placeholder="Search ingredients...">
+          </div>
+          <div class="category-filters" id="inventory-filters">
+            <button class="filter-btn active" data-category="all">All</button>
+            <button class="filter-btn" data-category="Produce">Produce</button>
+            <button class="filter-btn" data-category="Proteins">Proteins</button>
+            <button class="filter-btn" data-category="Pantry">Pantry & Seasoning</button>
+            <button class="filter-btn" data-category="Grains">Grains & Bakes</button>
+            <button class="filter-btn" data-category="Dairy">Dairy & Eggs</button>
+          </div>
+        </div>
+
+        <!-- Inventory List Grid -->
+        <div class="inventory-grid" id="inventory-grid-list">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- TAB 3: RECIPES -->
+      <section id="tab-recipes" class="tab-pane">
+        <!-- Recipes Toolbar -->
+        <div class="toolbar">
+          <div class="search-box">
+            <i data-lucide="search"></i>
+            <input type="text" id="recipes-search" placeholder="Search recipes...">
+          </div>
+          <div class="category-filters" id="recipes-filters">
+            <button class="filter-btn active" data-meal-type="all">All</button>
+            <button class="filter-btn" data-meal-type="quick_easy">Quick & Easy</button>
+            <button class="filter-btn" data-meal-type="breakfast">Breakfast</button>
+            <button class="filter-btn" data-meal-type="packed_lunch">Packed Lunch</button>
+            <button class="filter-btn" data-meal-type="snack">Snacks</button>
+            <button class="filter-btn" data-meal-type="long_multiday">Long / Multi-day</button>
+          </div>
+          <button class="btn btn-secondary btn-add-recipe" id="btn-create-recipe-toolbar">
+            <i data-lucide="plus"></i>
+            <span>Add Recipe</span>
+          </button>
+        </div>
+
+        <!-- Recipes Grid -->
+        <div class="recipes-grid" id="recipes-grid-list">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- TAB 4: DIFFICULTY TWEAKER -->
+      <section id="tab-difficulty-tweak" class="tab-pane">
+        <div class="tweaker-header">
+          <div class="tweaker-intro">
+            <h2>Ingredient Acquisition Difficulty (Food Distance Rankings)</h2>
+            <p>Customize the "Acquisition Difficulty" for each ingredient. 1 represents items readily available in your pantry or kitchen (e.g. salt, garlic), while 10 represents items that are very hard to get (e.g. specialty meats, rare spices, long-distance shopping items). The recipe recommender computes the difficulty of missing ingredients to tell you which meals are easiest to achieve.</p>
+          </div>
+        </div>
+
+        <div class="tweaker-container">
+          <!-- Left side: List of ingredients and difficulty sliders -->
+          <div class="tweaker-controls-pane card">
+            <div class="search-box mb-1">
+              <i data-lucide="search"></i>
+              <input type="text" id="tweaker-search" placeholder="Search ingredients to tweak...">
+            </div>
+            <div class="tweaker-list" id="tweaker-list-container">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Right side: Visual summary / Legend of difficulty ratings -->
+          <div class="tweaker-info-pane">
+            <div class="card bg-gradient-purple mb-1">
+              <h3>What does "Food Distance" mean?</h3>
+              <p>For any recipe, we sum up the difficulty of all <strong>missing ingredients</strong>. This gives you a clear score of how much effort, distance, or expense it will take to make that meal.</p>
+              <div class="distance-formula">
+                <code>Meal Distance = &sum; Difficulty of Missing Ingredients</code>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Difficulty Reference Scale</h3>
+              <ul class="scale-legend">
+                <li><span class="badge diff-1">1-2</span> <strong>Ubiquitous / Staples</strong>: Always on hand, salt, water, basic spices, garlic.</li>
+                <li><span class="badge diff-4">3-4</span> <strong>Common Groceries</strong>: Onions, eggs, rice, butter, milk. Easy grab.</li>
+                <li><span class="badge diff-6">5-6</span> <strong>Fresh Proteins / Produce</strong>: Chicken, beef, fresh herbs, specific vegetables.</li>
+                <li><span class="badge diff-8">7-8</span> <strong>Specialty Items</strong>: Imported seasonings, Gochujang, premium seafood, specific cheeses.</li>
+                <li><span class="badge diff-10">9-10</span> <strong>Rare / Hard to Acquire</strong>: Organic direct-farm meats, rare ingredients, high cost items.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: ADD / EDIT INGREDIENT -->
+  <div class="modal-backdrop" id="modal-ingredient">
+    <div class="modal-content card">
+      <div class="modal-header">
+        <h3 id="modal-ingredient-title">Add Ingredient</h3>
+        <button class="btn-close" onclick="closeModal('modal-ingredient')"><i data-lucide="x"></i></button>
+      </div>
+      <form id="form-ingredient" onsubmit="handleIngredientSubmit(event)">
+        <input type="hidden" id="edit-ingredient-id">
+        <div class="form-group">
+          <label for="ing-name">Ingredient Name</label>
+          <input type="text" id="ing-name" placeholder="e.g. Garlic, Onions, Chicken Breast" required autocomplete="off">
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="ing-category">Category</label>
+            <select id="ing-category" required>
+              <option value="Produce">Produce</option>
+              <option value="Proteins">Proteins</option>
+              <option value="Pantry">Pantry & Seasoning</option>
+              <option value="Grains">Grains & Bakes</option>
+              <option value="Dairy">Dairy & Eggs</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="ing-difficulty">Acquisition Difficulty (1-10)</label>
+            <select id="ing-difficulty" required>
+              <option value="1">1 - Extremely Easy (Garlic, Salt)</option>
+              <option value="2">2 - Basic Staples (Water, Sugar)</option>
+              <option value="3">3 - Easy Fresh Veggies (Onions, Carrots)</option>
+              <option value="4">4 - Dairy & Eggs (Milk, Eggs)</option>
+              <option value="5">5 - Pantry Oils & Sauces</option>
+              <option value="6">6 - Regular Meats (Chicken Breast)</option>
+              <option value="7">7 - Specialty/Imported (Gochujang)</option>
+              <option value="8">8 - Premium Protein (Salmon, Ribeye)</option>
+              <option value="9">9 - Hard to Procure</option>
+              <option value="10">10 - Rare / High Friction</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="ing-qty">Current Quantity</label>
+            <input type="number" id="ing-qty" placeholder="0" min="0" step="any" required>
+          </div>
+          <div class="form-group flex-1">
+            <label for="ing-unit">Unit</label>
+            <input type="text" id="ing-unit" placeholder="e.g. g, pcs, tbsp, ml" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="ing-expiry">Expiration Date (Optional)</label>
+          <input type="date" id="ing-expiry">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-ingredient')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Ingredient</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT RECIPE -->
+  <div class="modal-backdrop" id="modal-recipe">
+    <div class="modal-content card modal-content-lg">
+      <div class="modal-header">
+        <h3 id="modal-recipe-title">Add Recipe</h3>
+        <button class="btn-close" onclick="closeModal('modal-recipe')"><i data-lucide="x"></i></button>
+      </div>
+      <form id="form-recipe" onsubmit="handleRecipeSubmit(event)">
+        <input type="hidden" id="edit-recipe-id">
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="recipe-name">Recipe Name</label>
+            <input type="text" id="recipe-name" placeholder="e.g. Garlic Butter Chicken Pasta" required>
+          </div>
+          <div class="form-group flex-1">
+            <label for="recipe-category">Meal Category</label>
+            <select id="recipe-category" required>
+              <option value="quick_easy">Quick & Easy</option>
+              <option value="breakfast">Breakfast</option>
+              <option value="packed_lunch">Packed Lunch</option>
+              <option value="snack">Snack</option>
+              <option value="long_multiday">Long / Multi-day</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="recipe-time">Prep + Cook Time (mins)</label>
+            <input type="number" id="recipe-time" placeholder="e.g. 25" min="1" required>
+          </div>
+          <div class="form-group flex-1">
+            <label for="recipe-flavour">Flavour Rating (1-5)</label>
+            <select id="recipe-flavour" required>
+              <option value="5">⭐⭐⭐⭐⭐ (Incredible)</option>
+              <option value="4">⭐⭐⭐⭐ (Great)</option>
+              <option value="3">⭐⭐⭐ (Good)</option>
+              <option value="2">⭐⭐ (Mediocre)</option>
+              <option value="1">⭐ (Boring)</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="recipe-ease">Ease of Cooking (1-5)</label>
+            <select id="recipe-ease" required>
+              <option value="5">⭐⭐⭐⭐⭐ (No cooking, basic prep)</option>
+              <option value="4">⭐⭐⭐⭐ (Simple cooking, 1 pot)</option>
+              <option value="3">⭐⭐⭐ (Average, some timing needed)</option>
+              <option value="2">⭐⭐ (Needs technique/attention)</option>
+              <option value="1">⭐ (Complex, advanced culinary skill)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Ingredients List</label>
+          <div id="recipe-ingredients-inputs-list">
+            <!-- Dynamic rows of ingredient selectors -->
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm mt-1" onclick="addRecipeIngredientRow()">
+            <i data-lucide="plus"></i> Add Ingredient Row
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label for="recipe-instructions">Instructions (One step per line)</label>
+          <textarea id="recipe-instructions" placeholder="Step 1: Boil the pasta.&#10;Step 2: Mince the garlic and sauté in butter.&#10;Step 3: Toss pasta with sauce and chicken." rows="4" required></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-recipe')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Recipe</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: RECIPE DETAILS (VIEW MODE) -->
+  <div class="modal-backdrop" id="modal-recipe-details">
+    <div class="modal-content card modal-content-lg">
+      <div class="modal-header bg-accent-glow">
+        <div>
+          <span class="recipe-detail-category" id="view-recipe-category">QUICK & EASY</span>
+          <h2 id="view-recipe-name">Garlic Butter Chicken Pasta</h2>
+        </div>
+        <button class="btn-close" onclick="closeModal('modal-recipe-details')"><i data-lucide="x"></i></button>
+      </div>
+      <div class="recipe-detail-body">
+        <!-- Visual Stats Strip -->
+        <div class="recipe-detail-stats">
+          <div class="detail-stat">
+            <span class="detail-stat-label">Time</span>
+            <span class="detail-stat-val" id="view-recipe-time">25 mins</span>
+          </div>
+          <div class="detail-stat">
+            <span class="detail-stat-label">Flavour</span>
+            <span class="detail-stat-val text-amber" id="view-recipe-flavour">⭐⭐⭐⭐⭐</span>
+          </div>
+          <div class="detail-stat">
+            <span class="detail-stat-label">Ease</span>
+            <span class="detail-stat-val text-cyan" id="view-recipe-ease">⭐⭐⭐⭐</span>
+          </div>
+          <div class="detail-stat">
+            <span class="detail-stat-label">Food Distance</span>
+            <span class="detail-stat-val" id="view-recipe-distance">Distance: 0</span>
+          </div>
+        </div>
+
+        <div class="recipe-detail-grid">
+          <!-- Left Panel: Ingredients Completeness checklist -->
+          <div class="detail-pane">
+            <h3>Ingredients Check</h3>
+            <p class="recipe-pantry-subtitle">Based on your current inventory:</p>
+            <ul class="recipe-ingredients-checklist" id="view-recipe-ingredients-list">
+              <!-- Dynamically populated: Green checks for in-stock, Red warning for missing items with difficulty score -->
+            </ul>
+          </div>
+
+          <!-- Right Panel: Preparation steps -->
+          <div class="detail-pane">
+            <h3>Instructions</h3>
+            <ol class="recipe-steps-list" id="view-recipe-steps">
+              <!-- Dynamically populated -->
+            </ol>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-top-glow">
+        <button class="btn btn-secondary" onclick="closeModal('modal-recipe-details')">Close</button>
+        <button class="btn btn-primary" id="btn-edit-recipe-action">Edit Recipe</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
