@@ -1,0 +1,5 @@
+- [x] Add Data Portability Card to UI in `index.html`
+- [x] Add Styling for Data Portability elements in `style.css`
+- [x] Implement Export JSON functionality in `app.js`
+- [x] Implement Import JSON functionality with validation and overwrite warning in `app.js`
+- [x] Verify functionality (Export / Import / Error Handling)

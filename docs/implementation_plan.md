@@ -1,94 +1,76 @@
-# Implementation Plan: Food Inventory & Smart Recipe App ("PantryChef")
+# Implementation Plan: Data Portability Suite (JSON Export & Import)
 
-This document outlines the design and implementation details for the Food Inventory & Smart Recipe Recommendation Web App. The app will help users track their food inventory, organize recipes (classified by cooking style, time, and ease), and calculate the **"Food Distance"** (the closest/easiest meals to prepare based on current inventory and custom-rated ingredient acquisition difficulties).
-
----
-
-## 1. Core Features
-
-### A. Dashboard & Smart Meal Finder
-- **Interactive Overview**: Visual stats showing inventory counts, expiring items, and fully craftable recipes.
-- **Smart Recommendations**: 
-  - **Ready to Cook**: Recipes where all ingredients are currently in stock.
-  - **Closest Matches (Lowest Food Distance)**: Recipes missing a few ingredients, sorted by the difficulty/cost of acquiring those missing items.
-
-### B. Inventory Management
-- **Categorized Inventory**: Grouped into categories (e.g., *Proteins, Produce/Vegetables, Pantry & Seasonings, Grains & Bakes, Dairy & Eggs*).
-- **Ingredient Metadata**:
-  - Name, Quantity, and Unit (e.g., grams, pieces, tbsp).
-  - **Acquisition Difficulty / Food Distance Score** (1 = extremely common/cheap like onions/garlic, 10 = specialty/expensive like premium steak or imported condiments).
-  - Expiry date tracker with visual warnings.
-- **Quick Controls**: Instant increment/decrement counters, search bar, and add/edit modals.
-
-### C. Recipe Book & Creator
-- **Categorized Recipes**:
-  - *Quick & Easy / Breakfasts / Packed Lunches / Snacks / Long, Multi-day Meals*.
-- **Curation & Ratings**:
-  - **Flavour Rating** (1-5 stars).
-  - **Ease Rating** (1-5 stars).
-  - **Preparation Time** (in minutes).
-- **Ingredient Requirements**: List of ingredients and required quantities.
-- **Recipe Detail Modal**: Displays instructions, ingredient completeness list (checking off what you have in green, highlighting what is missing in red), and the total "Food Distance" to make this meal.
-
-### D. "Food Distance" Metric & Ingredient Curations
-- **The Concept**: "Food Distance" represents the friction required to prepare a meal.
-- **Calculation Formula**:
-  $$\text{Food Distance} = \sum_{i \in \text{Missing Ingredients}} (\text{Required Quantity Factor} \times \text{Acquisition Difficulty of } i)$$
-- **Ingredient Difficulty Curations Page**: A control panel to edit the difficulty rankings of all known ingredients, allowing the user to tweak the system to their specific neighborhood/budget (e.g. marking certain meats as high difficulty, or setting local garden veggies to low difficulty).
+This plan outlines the design, implementation, and verification steps for adding backup, export, and import capabilities to the PantryChef application. This ensures users do not lose their custom ingredients, custom recipes, and fine-tuned acquisition difficulty settings.
 
 ---
 
-## 2. Technology Stack & Architecture
+## 1. User Review Required
 
-- **Frontend Core**: Vanilla HTML5, modern CSS3 (custom properties, glassmorphism, responsive grid/flexbox), and ES6+ JavaScript.
-- **State Management**: A reactive local state persisted in browser `localStorage`.
-- **Icons**: Lucide Icons (loaded via CDN) for crisp, modern SVG icons.
-- **Fonts**: Google Fonts (`Outfit` and `Inter`) for typography.
-- **Self-Contained Dev server**: Run using a simple HTTP server for instant preview.
-
----
-
-## 3. UI/UX Design System (Theme: "Midnight Orchard")
-
-To create a **premium, state-of-the-art visual appearance**, we will use a sleek dark-mode glassmorphism interface.
-
-* **Colors**:
-  - Background: Deep Obsidian (`#0B0F19`)
-  - Surface Glass: Semi-transparent Slate (`rgba(30, 41, 59, 0.45)`)
-  - Accent Green (Success/In Stock): Teal Mint (`#00F2FE` gradient to `#4FACFE` or Emerald `#10B981`)
-  - Accent Amber (Warning/Missing): Warm Gold (`#F59E0B`)
-  - Accent Red (High Difficulty/Expired): Crimson Rose (`#EF4444`)
-  - Accent Purple (Brand/Specialty): Neon Violet (`#8B5CF6` to `#EC4899`)
-* **Effects**:
-  - Backdrop Blur: `backdrop-filter: blur(16px)`
-  - Border Glows: `1px solid rgba(255, 255, 255, 0.08)`
-  - Box Shadows: Smooth multi-layered ambient shadows.
-* **Typography**:
-  - Headings: `Outfit` (clean, geometric sans-serif)
-  - Body Text: `Inter` (excellent legibility)
+> [!WARNING]
+> **Data Overwrite Precaution**: When a user imports a backup file, it can potentially conflict with or overwrite their current active pantry and recipes. We will implement:
+> 1. Structure validation to ensure corrupt or malformed JSON files do not break the app.
+> 2. A clear confirmation prompt warning the user before overwriting existing data.
+> 3. Fallbacks to default values if the imported file is missing fields.
 
 ---
 
-## 4. Directory & File Structure
+## 2. Proposed Changes
 
-We will place all files in the root folder of our empty workspace:
-```
-food app/
-├── index.html         # Main entry point & HTML structure
-├── style.css          # Vanilla CSS containing design tokens, animations, and layouts
-└── app.js             # JavaScript application logic (State, Event Handlers, Algorithms)
-```
+### UI & Layout Integration
+
+We will place the **Data Portability** panel in the **Acquisition Settings** tab (`#tab-difficulty-tweak`), specifically within the right-hand information column (`.tweaker-info-pane`). This keeps settings-related tools grouped together and keeps the sidebar and dashboard clean.
 
 ---
 
-## 5. Development Steps
+### [Component: Frontend Structure]
 
-1. **Step 1**: Write `index.html` structure with semantic components (Sidebar navigation, Main dashboard, Inventory section, Recipe book, Settings panel, and Modals).
-2. **Step 2**: Write `style.css` implementing the "Midnight Orchard" theme, glassmorphism, hover transitions, and responsive grid system.
-3. **Step 3**: Write `app.js` with:
-   - Default mock inventory items (with varying difficulties).
-   - Default mock recipes (including breakfasts, snacks, quick lunches, and complex dinners).
-   - LocalStorage synchronization.
-   - The "Food Distance" calculator.
-   - Interactive modals for adding/editing ingredients & recipes.
-4. **Step 4**: Test and refine the interface. Check interactions, sliders for difficulty, and recipe filtering.
+#### [MODIFY] [index.html](file:///c:/Users/Salem/Documents/LOCAL%20REPOS/food%20app/index.html)
+- Add a new section card inside `.tweaker-info-pane` for Data Portability.
+- Add an "Export Backup" button with a download icon.
+- Add an "Import Backup" button wrapping a hidden `<input type="file" accept=".json">` to trigger file selection.
+- Update/add Lucide icons for download and upload.
+
+---
+
+### [Component: Frontend Styling]
+
+#### [MODIFY] [style.css](file:///c:/Users/Salem/Documents/LOCAL%20REPOS/food%20app/style.css)
+- Style the portability card, aligning buttons side-by-side or stacked cleanly.
+- Add micro-animations and glow highlights for action buttons.
+- Create class styles for file inputs to maintain a premium custom upload appearance instead of browser defaults.
+
+---
+
+### [Component: Logic & State Management]
+
+#### [MODIFY] [app.js](file:///c:/Users/Salem/Documents/LOCAL%20REPOS/food%20app/app.js)
+- Implement `exportAppData()`:
+  - Aggregates `state.ingredients`, `state.recipes`, and `state.knownIngredients`.
+  - Serializes to a formatted JSON string.
+  - Triggers a browser download file named `pantrychef_backup_[date].json`.
+  - Displays a success toast notification.
+- Implement `importAppData(event)`:
+  - Reads the selected file using `FileReader`.
+  - Validates JSON format and checks for presence of required keys.
+  - Warns the user with a confirmation dialog: *"This will replace your current kitchen pantry, recipes, and difficulty costs. Proceed?"*
+  - Overwrites the local state, saves it to `localStorage`, re-runs synchronization, and updates active tab views.
+  - Displays success or failure toast notifications.
+
+---
+
+## 3. Verification Plan
+
+### Manual Verification
+1. **Export Functionality**:
+   - Add a custom ingredient and a custom recipe.
+   - Adjust the difficulty of an ingredient.
+   - Click "Export Backup". Verify a `.json` file is downloaded.
+   - Inspect the downloaded file to ensure it contains the custom data.
+2. **Import Functionality**:
+   - Clear browser local storage or manually delete items.
+   - Select the exported `.json` file.
+   - Verify the warning popup appears. Confirm import.
+   - Verify all custom ingredients, recipes, and difficulty values are fully restored.
+3. **Invalid File Handling**:
+   - Attempt to import a non-JSON file or a corrupted JSON file.
+   - Verify an error toast appears and no state changes are made.

@@ -41,7 +41,12 @@ When you view a recipe that is **Ready to Cook**, a **"Cook Meal!"** button appe
 
 ### 4. Interactive Dialog Modals
 - **Add/Edit Ingredient**: Allows specifying names, categories, custom units, baseline difficulty, and optional expiration dates.
-- **Add/Edit Recipe**: Allows drafting a recipe name, meal type (Quick & Easy, Breakfast, Packed Lunch, Snack, or Multi-day), prep/cook time, and custom ratings for **Flavour** and **Ease**. It features a dynamic ingredient list builder where you can add/remove ingredient requirements on the fly.
+### 5. Data Portability Suite
+- **Export Backup**: Packages all active inventory, custom recipes, and ingredient difficulty cost settings into a clean, formatted JSON file (`pantrychef_backup_YYYY-MM-DD.json`) and downloads it via the browser.
+- **Import Backup**: Allows uploading a previously exported JSON backup.
+  - Features validation to ensure structure integrity and prevent corrupted files from crashing the app.
+  - Warns the user with a confirmation dialog before overwriting current data.
+  - Updates the active view immediately upon successful restoration.
 
 ---
 

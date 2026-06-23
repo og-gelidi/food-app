@@ -266,6 +266,13 @@ function initEventHandlers() {
   document.getElementById("btn-create-recipe-toolbar").addEventListener("click", () => {
     openRecipeModal();
   });
+
+  // Data Portability listeners
+  document.getElementById("btn-export-data").addEventListener("click", exportAppData);
+  document.getElementById("btn-import-trigger").addEventListener("click", () => {
+    document.getElementById("import-file-input").click();
+  });
+  document.getElementById("import-file-input").addEventListener("change", importAppData);
 }
 
 function switchTab(tabId) {
@@ -1153,4 +1160,99 @@ function capitalizeWord(string) {
   return string.split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
+}
+
+// --- DATA PORTABILITY SYSTEM (BACKUP & RESTORE) ---
+function exportAppData() {
+  try {
+    const backupData = {
+      ingredients: state.ingredients,
+      recipes: state.recipes,
+      knownIngredients: state.knownIngredients,
+      exportedAt: new Date().toISOString(),
+      version: "1.0"
+    };
+    
+    const jsonString = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const downloadAnchor = document.createElement("a");
+    const todayStr = new Date().toISOString().split("T")[0];
+    
+    downloadAnchor.href = url;
+    downloadAnchor.download = `pantrychef_backup_${todayStr}.json`;
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    
+    // Clean up
+    document.body.removeChild(downloadAnchor);
+    URL.revokeObjectURL(url);
+    
+    showToast("Backup exported successfully!", "success");
+  } catch (error) {
+    console.error("Export failed:", error);
+    showToast("Failed to export backup data.", "error");
+  }
+}
+
+function importAppData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const importedData = JSON.parse(e.target.result);
+      
+      // Structure Validation
+      if (!importedData || typeof importedData !== "object") {
+        throw new Error("Invalid backup format: root must be an object.");
+      }
+      
+      // Check for expected arrays/objects
+      const hasIngredients = Array.isArray(importedData.ingredients);
+      const hasRecipes = Array.isArray(importedData.recipes);
+      const hasKnownIngredients = importedData.knownIngredients && typeof importedData.knownIngredients === "object";
+      
+      if (!hasIngredients && !hasRecipes && !hasKnownIngredients) {
+        throw new Error("Invalid backup data: no valid pantry configuration found.");
+      }
+      
+      // Prompt for confirmation before replacing local data
+      const message = "Are you sure you want to import this backup? This will replace your current kitchen pantry ingredients, recipes, and difficulty rankings. This cannot be undone.";
+      if (!confirm(message)) {
+        event.target.value = "";
+        return;
+      }
+      
+      // Save data, with fallback to empty structure if keys are missing
+      state.ingredients = importedData.ingredients || [];
+      state.recipes = importedData.recipes || [];
+      state.knownIngredients = importedData.knownIngredients || {};
+      
+      saveStateToLocalStorage();
+      syncKnownIngredients();
+      
+      // Reset input value
+      event.target.value = "";
+      
+      showToast("Data imported successfully!", "success");
+      
+      // Re-render active view
+      const activeTab = document.querySelector(".nav-link.active").getAttribute("data-tab");
+      switchTab(activeTab);
+    } catch (err) {
+      console.error("Import parsing/validation error:", err);
+      showToast(err.message || "Failed to parse backup file.", "error");
+      event.target.value = "";
+    }
+  };
+  
+  reader.onerror = function() {
+    showToast("Failed to read the backup file.", "error");
+    event.target.value = "";
+  };
+  
+  reader.readAsText(file);
 }

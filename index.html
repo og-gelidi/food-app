@@ -222,6 +222,22 @@
                 <li><span class="badge diff-10">9-10</span> <strong>Rare / Hard to Acquire</strong>: Organic direct-farm meats, rare ingredients, high cost items.</li>
               </ul>
             </div>
+
+            <div class="card mt-1">
+              <h3>Data Portability</h3>
+              <p class="text-secondary mb-1" style="font-size: 0.85rem; line-height: 1.4;">Backup or restore your kitchen data including pantry items, custom recipes, and ingredient costs.</p>
+              <div class="portability-actions" style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+                <button class="btn btn-secondary btn-sm" id="btn-export-data" style="flex: 1; justify-content: center;">
+                  <i data-lucide="download"></i>
+                  <span>Export</span>
+                </button>
+                <button class="btn btn-secondary btn-sm" id="btn-import-trigger" style="flex: 1; justify-content: center;">
+                  <i data-lucide="upload"></i>
+                  <span>Import</span>
+                </button>
+                <input type="file" id="import-file-input" accept=".json" style="display: none;">
+              </div>
+            </div>
           </div>
         </div>
       </section>
