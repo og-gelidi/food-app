@@ -3,3 +3,4 @@
 - [x] Implement Export JSON functionality in `app.js`
 - [x] Implement Import JSON functionality with validation and overwrite warning in `app.js`
 - [x] Verify functionality (Export / Import / Error Handling)
+- [] Add different options for recipe score calculation (sigma vs pi vs idk something else, with explanations for each) 

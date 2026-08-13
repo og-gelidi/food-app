@@ -191,12 +191,21 @@ function initAppState() {
   
   // Keep master list of known difficulties updated with any newly added ingredient names
   syncKnownIngredients();
+
+  // Initialize Supabase and run background sync if key is set
+  initSupabase();
+  if (supabaseClient && localStorage.getItem("pc_supabase_sync_key")) {
+    syncNow(true);
+  }
 }
 
 function saveStateToLocalStorage() {
   localStorage.setItem("pc_ingredients", JSON.stringify(state.ingredients));
   localStorage.setItem("pc_recipes", JSON.stringify(state.recipes));
   localStorage.setItem("pc_knownIngredients", JSON.stringify(state.knownIngredients));
+  localStorage.setItem("pc_last_updated", new Date().toISOString());
+  
+  triggerBackgroundSync();
 }
 
 // Add any missing ingredient from current inventory/recipes to the global difficulty register
@@ -310,6 +319,10 @@ function switchTab(tabId) {
     pageTitle.textContent = "Acquisition Settings";
     headerBtn.style.display = "none";
     renderTweaker();
+  } else if (tabId === "cloud-sync") {
+    pageTitle.textContent = "Cloud Sync";
+    headerBtn.style.display = "none";
+    renderSyncManager();
   }
 
   lucide.createIcons();
@@ -748,7 +761,16 @@ function handleIngredientSubmit(event) {
   const qty = parseFloat(document.getElementById("ing-qty").value);
   const unit = document.getElementById("ing-unit").value.trim();
   const difficulty = parseInt(document.getElementById("ing-difficulty").value);
-  const expiry = document.getElementById("ing-expiry").value;
+  let expiry = document.getElementById("ing-expiry").value;
+  const expiryDaysVal = document.getElementById("ing-expiry-days").value;
+  if (expiryDaysVal) {
+    const days = parseInt(expiryDaysVal);
+    if (!isNaN(days) && days > 0) {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + days);
+      expiry = futureDate.toISOString().split('T')[0];
+    }
+  }
 
   const normalizedName = capitalizeWord(name);
 
@@ -1256,3 +1278,382 @@ function importAppData(event) {
   
   reader.readAsText(file);
 }
+
+// ==========================================
+// CLOUD SYNCHRONIZATION SYSTEM (SUPABASE)
+// ==========================================
+
+let supabaseClient = null;
+let isSyncingState = false; // Prevents infinite sync loops during updates
+
+/**
+ * Initializes the Supabase client using stored credentials.
+ */
+function initSupabase() {
+  const url = localStorage.getItem("pc_supabase_url");
+  const key = localStorage.getItem("pc_supabase_key");
+  
+  if (url && key) {
+    try {
+      // supabase is loaded from the CDN script in index.html
+      supabaseClient = supabase.createClient(url, key);
+      return true;
+    } catch (e) {
+      console.error("Failed to initialize Supabase client:", e);
+      supabaseClient = null;
+    }
+  }
+  return false;
+}
+
+/**
+ * Renders the Cloud Sync panel view depending on config status.
+ */
+function renderSyncManager() {
+  const urlInput = document.getElementById("sync-supabase-url");
+  const keyInput = document.getElementById("sync-supabase-key");
+  
+  const savedUrl = localStorage.getItem("pc_supabase_url") || "";
+  const savedKey = localStorage.getItem("pc_supabase_key") || "";
+  const syncKey = localStorage.getItem("pc_supabase_sync_key") || "";
+  
+  urlInput.value = savedUrl;
+  keyInput.value = savedKey ? "••••••••••••••••" : ""; // Hide actual key
+  
+  const activeSection = document.getElementById("sync-profile-active-section");
+  const setupSection = document.getElementById("sync-profile-setup-section");
+  
+  if (supabaseClient) {
+    if (syncKey) {
+      activeSection.style.display = "block";
+      setupSection.style.display = "none";
+      document.getElementById("sync-key-display").value = syncKey;
+      updateSyncStatusUI("online", "Connected");
+    } else {
+      activeSection.style.display = "none";
+      setupSection.style.display = "block";
+      updateSyncStatusUI("offline", "Database Linked (No Sync Key)");
+    }
+  } else {
+    activeSection.style.display = "none";
+    setupSection.style.display = "block";
+    updateSyncStatusUI("offline", "Not Connected");
+  }
+}
+
+/**
+ * Handles database connection form submission.
+ */
+function handleSyncConfigSubmit(event) {
+  event.preventDefault();
+  
+  const url = document.getElementById("sync-supabase-url").value.trim();
+  let key = document.getElementById("sync-supabase-key").value.trim();
+  
+  // If the user didn't modify the password field, use the existing saved key
+  if (key === "••••••••••••••••" || key === "") {
+    key = localStorage.getItem("pc_supabase_key") || "";
+  }
+  
+  if (!url || !key) {
+    showToast("Please enter both the URL and the API Key.", "error");
+    return;
+  }
+  
+  localStorage.setItem("pc_supabase_url", url);
+  localStorage.setItem("pc_supabase_key", key);
+  
+  if (initSupabase()) {
+    showToast("Database linked successfully!", "success");
+    renderSyncManager();
+    // If a sync key already existed, try to run a sync
+    const syncKey = localStorage.getItem("pc_supabase_sync_key");
+    if (syncKey) {
+      syncNow();
+    }
+  } else {
+    showToast("Failed to initialize Supabase connection.", "error");
+  }
+}
+
+/**
+ * Disconnects the database and clears credentials.
+ */
+function clearSyncConfig() {
+  if (!confirm("Are you sure you want to disconnect? This will remove your Supabase configuration and disable cloud syncing on this device. (Your local pantry data will remain intact.)")) {
+    return;
+  }
+  
+  localStorage.removeItem("pc_supabase_url");
+  localStorage.removeItem("pc_supabase_key");
+  localStorage.removeItem("pc_supabase_sync_key");
+  
+  supabaseClient = null;
+  
+  document.getElementById("sync-supabase-url").value = "";
+  document.getElementById("sync-supabase-key").value = "";
+  document.getElementById("sync-key-input").value = "";
+  
+  showToast("Disconnected from cloud database.", "info");
+  renderSyncManager();
+}
+
+/**
+ * Generates a new Sync Key (UUID) and creates a remote record.
+ */
+async function initiateNewSyncProfile() {
+  if (!supabaseClient) {
+    showToast("Please connect to your Supabase database first.", "error");
+    return;
+  }
+  
+  // Simple UUID generator fallback
+  const newUuid = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+  );
+  
+  updateSyncStatusUI("syncing", "Creating Profile...");
+  
+  try {
+    const { error } = await supabaseClient
+      .from('pantrychef_sync')
+      .insert([
+        { 
+          id: newUuid,
+          ingredients: state.ingredients,
+          recipes: state.recipes,
+          known_ingredients: state.knownIngredients,
+          updated_at: new Date().toISOString()
+        }
+      ]);
+      
+    if (error) throw error;
+    
+    localStorage.setItem("pc_supabase_sync_key", newUuid);
+    localStorage.setItem("pc_last_updated", new Date().toISOString());
+    showToast("Cloud sync profile generated!", "success");
+    renderSyncManager();
+  } catch (err) {
+    console.error("Profile generation error:", err);
+    showToast("Database insertion failed. Verify your Supabase table schema.", "error");
+    renderSyncManager();
+  }
+}
+
+/**
+ * Links to an existing Sync Key and pulls down its data.
+ */
+async function linkExistingSyncProfile() {
+  if (!supabaseClient) {
+    showToast("Please connect to your Supabase database first.", "error");
+    return;
+  }
+  
+  const keyInput = document.getElementById("sync-key-input").value.trim();
+  
+  if (!keyInput) {
+    showToast("Please enter a valid Sync Key.", "error");
+    return;
+  }
+  
+  updateSyncStatusUI("syncing", "Checking Profile...");
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('pantrychef_sync')
+      .select('*')
+      .eq('id', keyInput)
+      .single();
+      
+    if (error || !data) {
+      throw new Error("Sync Key not found. Please double-check the key.");
+    }
+    
+    if (!confirm("Successfully found database! Overwrite your local pantry with the cloud backup?")) {
+      renderSyncManager();
+      return;
+    }
+    
+    // Save credentials
+    localStorage.setItem("pc_supabase_sync_key", keyInput);
+    
+    // Load remote state
+    isSyncingState = true;
+    state.ingredients = data.ingredients || [];
+    state.recipes = data.recipes || [];
+    state.knownIngredients = data.known_ingredients || {};
+    
+    localStorage.setItem("pc_ingredients", JSON.stringify(state.ingredients));
+    localStorage.setItem("pc_recipes", JSON.stringify(state.recipes));
+    localStorage.setItem("pc_knownIngredients", JSON.stringify(state.knownIngredients));
+    localStorage.setItem("pc_last_updated", data.updated_at || new Date().toISOString());
+    isSyncingState = false;
+    
+    syncKnownIngredients();
+    showToast("Synced from cloud successfully!", "success");
+    
+    // Render and refresh UI
+    renderSyncManager();
+    const activeTab = document.querySelector(".nav-link.active").getAttribute("data-tab");
+    switchTab(activeTab);
+  } catch (err) {
+    console.error("Linking error:", err);
+    showToast(err.message || "Cloud lookup failed.", "error");
+    renderSyncManager();
+  }
+}
+
+/**
+ * Performs a bi-directional synchronization with conflict resolution.
+ */
+async function syncNow(isBackground = false) {
+  if (!supabaseClient) {
+    if (!isBackground) showToast("Database not connected.", "error");
+    return;
+  }
+  
+  const syncKey = localStorage.getItem("pc_supabase_sync_key");
+  if (!syncKey) {
+    if (!isBackground) showToast("No active Sync Key.", "error");
+    return;
+  }
+  
+  updateSyncStatusUI("syncing", "Syncing...");
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('pantrychef_sync')
+      .select('*')
+      .eq('id', syncKey)
+      .single();
+      
+    if (error || !data) {
+      throw new Error("Cloud sync profile not found.");
+    }
+    
+    const localTimeStr = localStorage.getItem("pc_last_updated");
+    const localTime = localTimeStr ? new Date(localTimeStr).getTime() : 0;
+    const remoteTime = data.updated_at ? new Date(data.updated_at).getTime() : 0;
+    
+    // Allow a small 2-second drift threshold to prevent redundant writes
+    const drift = Math.abs(localTime - remoteTime);
+    
+    if (drift < 2000) {
+      // Already up to date
+      updateSyncStatusUI("online", "Connected (Synced)");
+      if (!isBackground) showToast("All data is up to date!", "info");
+      return;
+    }
+    
+    if (localTime > remoteTime) {
+      // Local changes are newer: Upload to Cloud
+      const nowStr = new Date().toISOString();
+      const { error: uploadError } = await supabaseClient
+        .from('pantrychef_sync')
+        .update({
+          ingredients: state.ingredients,
+          recipes: state.recipes,
+          known_ingredients: state.knownIngredients,
+          updated_at: nowStr
+        })
+        .eq('id', syncKey);
+        
+      if (uploadError) throw uploadError;
+      
+      localStorage.setItem("pc_last_updated", nowStr);
+      updateSyncStatusUI("online", "Connected (Synced)");
+      if (!isBackground) showToast("Local changes uploaded to cloud!", "success");
+    } else {
+      // Remote changes are newer: Download to Local
+      isSyncingState = true;
+      state.ingredients = data.ingredients || [];
+      state.recipes = data.recipes || [];
+      state.knownIngredients = data.known_ingredients || {};
+      
+      localStorage.setItem("pc_ingredients", JSON.stringify(state.ingredients));
+      localStorage.setItem("pc_recipes", JSON.stringify(state.recipes));
+      localStorage.setItem("pc_knownIngredients", JSON.stringify(state.knownIngredients));
+      localStorage.setItem("pc_last_updated", data.updated_at || new Date().toISOString());
+      isSyncingState = false;
+      
+      syncKnownIngredients();
+      updateSyncStatusUI("online", "Connected (Synced)");
+      if (!isBackground) showToast("Cloud changes downloaded successfully!", "success");
+      
+      // Refresh current UI tab
+      const activeTab = document.querySelector(".nav-link.active").getAttribute("data-tab");
+      switchTab(activeTab);
+    }
+  } catch (err) {
+    console.error("Synchronization error:", err);
+    updateSyncStatusUI("offline", "Sync Failed / Offline");
+    if (!isBackground) showToast("Sync failed: Check connection/credentials.", "error");
+  }
+}
+
+/**
+ * Triggers a background upload after state edits.
+ */
+async function triggerBackgroundSync() {
+  if (isSyncingState || !supabaseClient) return;
+  
+  const syncKey = localStorage.getItem("pc_supabase_sync_key");
+  if (!syncKey) return;
+  
+  updateSyncStatusUI("syncing", "Saving Changes...");
+  
+  try {
+    const nowStr = new Date().toISOString();
+    const { error } = await supabaseClient
+      .from('pantrychef_sync')
+      .update({
+        ingredients: state.ingredients,
+        recipes: state.recipes,
+        known_ingredients: state.knownIngredients,
+        updated_at: nowStr
+      })
+      .eq('id', syncKey);
+      
+    if (error) throw error;
+    localStorage.setItem("pc_last_updated", nowStr);
+    updateSyncStatusUI("online", "Connected (Synced)");
+  } catch (err) {
+    console.error("Background sync error:", err);
+    updateSyncStatusUI("offline", "Sync Failed / Offline");
+  }
+}
+
+/**
+ * Copies the active Sync Key to clipboard.
+ */
+function copySyncKey() {
+  const keyDisplay = document.getElementById("sync-key-display");
+  keyDisplay.select();
+  keyDisplay.setSelectionRange(0, 99999); // For mobile devices
+  
+  navigator.clipboard.writeText(keyDisplay.value)
+    .then(() => showToast("Sync Key copied to clipboard!", "success"))
+    .catch(() => showToast("Failed to copy key.", "error"));
+}
+
+/**
+ * Helper to update status indicators.
+ */
+function updateSyncStatusUI(status, text) {
+  const dot = document.getElementById("sync-status-dot");
+  const textEl = document.getElementById("sync-status-text");
+  
+  if (!dot || !textEl) return;
+  
+  dot.className = `status-dot ${status}`;
+  textEl.textContent = text;
+  
+  if (status === "online") {
+    textEl.style.color = "var(--color-emerald)";
+  } else if (status === "syncing") {
+    textEl.style.color = "var(--color-cyan)";
+  } else {
+    textEl.style.color = "var(--text-secondary)";
+  }
+}
+

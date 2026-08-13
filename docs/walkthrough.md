@@ -47,6 +47,12 @@ When you view a recipe that is **Ready to Cook**, a **"Cook Meal!"** button appe
   - Features validation to ensure structure integrity and prevent corrupted files from crashing the app.
   - Warns the user with a confirmation dialog before overwriting current data.
   - Updates the active view immediately upon successful restoration.
+- **Cloud Sync (Supabase integration)**:
+  - Synchronizes pantry inventory, recipes, and difficulty configurations across devices (like an iPhone and desktop) in the background.
+  - Uses a frictionless **Sync Key (UUID)** authentication model to connect profiles without email registration or password forms.
+  - Features automatic conflict resolution comparing local vs remote modification times (last write wins).
+  - Background uploads occur automatically whenever a change is saved (adding ingredients, modifying quantities, cooking meals).
+
 
 ---
 

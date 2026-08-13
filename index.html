@@ -14,6 +14,8 @@
   <link rel="stylesheet" href="style.css">
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Supabase JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <div class="app-container">
@@ -41,6 +43,10 @@
         <a href="#difficulty-tweak" class="nav-link" data-tab="difficulty-tweak" id="nav-btn-difficulty">
           <i data-lucide="sliders"></i>
           <span>Ingredient Cost</span>
+        </a>
+        <a href="#cloud-sync" class="nav-link" data-tab="cloud-sync" id="nav-btn-sync">
+          <i data-lucide="cloud-lightning"></i>
+          <span>Cloud Sync</span>
         </a>
       </nav>
       <div class="sidebar-footer">
@@ -241,6 +247,108 @@
           </div>
         </div>
       </section>
+
+      <!-- TAB 5: CLOUD SYNC -->
+      <section id="tab-cloud-sync" class="tab-pane">
+        <div class="sync-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+          <!-- Left side: Sync Configuration -->
+          <div class="card sync-config-card">
+            <h3 style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;"><i data-lucide="settings" class="icon-violet"></i> Cloud Database Setup</h3>
+            <p class="text-secondary mb-2" style="font-size: 0.9rem; line-height: 1.4;">Connect to your personal free Supabase database to synchronize your pantry and recipes across devices.</p>
+            
+            <form id="form-sync-config" onsubmit="handleSyncConfigSubmit(event)">
+              <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label for="sync-supabase-url" style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 500;">Supabase URL</label>
+                <input type="url" id="sync-supabase-url" placeholder="https://your-project.supabase.co" required autocomplete="off" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(15, 23, 42, 0.6); color: var(--text-main); font-family: inherit;">
+              </div>
+              <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label for="sync-supabase-key" style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 500;">Supabase Public Anon Key</label>
+                <input type="password" id="sync-supabase-key" placeholder="your-public-anon-key" required autocomplete="off" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(15, 23, 42, 0.6); color: var(--text-main); font-family: inherit;">
+              </div>
+              
+              <div class="sync-setup-actions" style="display: flex; gap: 0.75rem;">
+                <button type="submit" class="btn btn-primary" id="btn-save-sync-config" style="flex: 1; justify-content: center;">
+                  <i data-lucide="check-circle"></i>
+                  <span>Connect</span>
+                </button>
+                <button type="button" class="btn btn-secondary" id="btn-clear-sync-config" onclick="clearSyncConfig()" style="justify-content: center;">
+                  <span>Disconnect</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Right side: Profile & Sync Status -->
+          <div class="card sync-status-card">
+            <h3 style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;"><i data-lucide="refresh-cw" class="icon-cyan"></i> Sync Manager</h3>
+            
+            <div class="status-indicator-wrapper" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.03); border-radius: 6px; width: fit-content;">
+              <span class="status-dot offline" id="sync-status-dot" style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; background-color: #94a3b8; box-shadow: 0 0 8px #94a3b8;"></span>
+              <span class="status-text" id="sync-status-text" style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);">Offline</span>
+            </div>
+
+            <div id="sync-profile-active-section" style="display: none;">
+              <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 500;">Your Sync Key</label>
+                <div class="sync-key-container" style="display: flex; gap: 0.5rem;">
+                  <input type="text" id="sync-key-display" readonly value="" style="flex: 1; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(15, 23, 42, 0.6); color: var(--text-main); font-family: monospace; font-size: 0.85rem;">
+                  <button class="btn btn-secondary" id="btn-copy-sync-key" onclick="copySyncKey()" title="Copy Key" style="padding: 0.75rem;">
+                    <i data-lucide="copy"></i>
+                  </button>
+                </div>
+                <p class="text-secondary mt-05" style="font-size: 0.8rem; line-height: 1.4; color: var(--text-secondary); margin-top: 0.25rem;">Keep this key private. Enter it on your other devices to sync data.</p>
+              </div>
+
+              <div class="sync-manual-actions" style="margin-top: 1.5rem;">
+                <button class="btn btn-primary w-100" id="btn-sync-now" onclick="syncNow()" style="justify-content: center; width: 100%;">
+                  <i data-lucide="refresh-cw"></i>
+                  <span>Sync Now</span>
+                </button>
+              </div>
+            </div>
+
+            <div id="sync-profile-setup-section" style="display: none;">
+              <div class="sync-no-connection-message mb-2">
+                <p class="text-secondary" style="font-size: 0.9rem; color: var(--text-secondary);">Please connect to your Supabase database first to configure profiles.</p>
+              </div>
+              
+              <div class="card bg-accent-glow p-1 mb-2" style="background: rgba(139, 92, 246, 0.05); border: 1px solid rgba(139, 92, 246, 0.15); padding: 1rem; border-radius: 8px; margin-bottom: 1.25rem;">
+                <h4 style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text-main);"><i data-lucide="help-circle" class="icon-violet"></i> Database Setup Instructions</h4>
+                <ol style="margin-left: 1.25rem; font-size: 0.8rem; line-height: 1.5; margin-top: 0.5rem; color: var(--text-secondary);">
+                  <li>Create a free project at <strong><a href="https://supabase.com" target="_blank" style="color: #00F2FE; text-decoration: none;">supabase.com</a></strong>.</li>
+                  <li>Copy your <strong>Project URL</strong> and <strong>Anon API Key</strong> from Settings ➔ API.</li>
+                  <li>Run the following SQL in your Supabase SQL Editor:
+                    <pre style="background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px; font-family: monospace; font-size: 0.75rem; margin-top: 0.25rem; overflow-x: auto; white-space: pre-wrap;">CREATE TABLE pantrychef_sync (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ingredients JSONB DEFAULT '[]'::jsonb,
+  recipes JSONB DEFAULT '[]'::jsonb,
+  known_ingredients JSONB DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);</pre>
+                  </li>
+                </ol>
+              </div>
+
+              <div class="sync-setup-actions-group" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <button class="btn btn-primary" onclick="initiateNewSyncProfile()" style="justify-content: center;">
+                  <i data-lucide="plus-circle"></i>
+                  <span>Generate New Sync Key</span>
+                </button>
+                <div class="or-separator" style="text-align: center; font-size: 0.75rem; color: var(--text-secondary); margin: 0.25rem 0;">— OR —</div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label for="sync-key-input" style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 500;">Link Existing Sync Key</label>
+                  <div class="sync-key-container" style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="sync-key-input" placeholder="e.g. 12345678-abcd-1234-abcd-1234567890ab" style="flex: 1; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(15, 23, 42, 0.6); color: var(--text-main); font-family: inherit;">
+                    <button class="btn btn-secondary" onclick="linkExistingSyncProfile()">
+                      <span>Link</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -294,9 +402,15 @@
             <input type="text" id="ing-unit" placeholder="e.g. g, pcs, tbsp, ml" required>
           </div>
         </div>
-        <div class="form-group">
-          <label for="ing-expiry">Expiration Date (Optional)</label>
-          <input type="date" id="ing-expiry">
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="ing-expiry">Expiration Date</label>
+            <input type="date" id="ing-expiry">
+          </div>
+          <div class="form-group flex-1">
+            <label for="ing-expiry-days">Or, Expires in (Days)</label>
+            <input type="number" id="ing-expiry-days" placeholder="e.g. 3" min="1">
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="closeModal('modal-ingredient')">Cancel</button>
