@@ -1403,7 +1403,7 @@ function renderSyncManager() {
 /**
  * Handles database connection form submission.
  */
-function handleSyncConfigSubmit(event) {
+async function handleSyncConfigSubmit(event) {
   event.preventDefault();
   
   const url = document.getElementById("sync-supabase-url").value.trim();
@@ -1419,19 +1419,32 @@ function handleSyncConfigSubmit(event) {
     return;
   }
   
-  localStorage.setItem("pc_supabase_url", url);
-  localStorage.setItem("pc_supabase_key", key);
+  updateSyncStatusUI("syncing", "Testing connection...");
   
-  if (initSupabase()) {
-    showToast("Database linked successfully!", "success");
+  try {
+    const tempClient = supabase.createClient(url, key);
+    // Make a test query to verify connection and check that table exists
+    const { error } = await tempClient.from('pantrychef_sync').select('id').limit(1);
+    
+    if (error) throw error;
+    
+    // Connection verified! Save credentials
+    localStorage.setItem("pc_supabase_url", url);
+    localStorage.setItem("pc_supabase_key", key);
+    supabaseClient = tempClient;
+    
+    showToast("Database verified & connected!", "success");
     renderSyncManager();
-    // If a sync key already existed, try to run a sync
+    
+    // If a sync key already existed, run a sync
     const syncKey = localStorage.getItem("pc_supabase_sync_key");
     if (syncKey) {
       syncNow();
     }
-  } else {
-    showToast("Failed to initialize Supabase connection.", "error");
+  } catch (err) {
+    console.error("Database connection check failed:", err);
+    updateSyncStatusUI("offline", "Connection Failed");
+    showToast(`Failed to connect: ${err.message || "Check URL, API Key, and verify that the table 'pantrychef_sync' exists."}`, "error");
   }
 }
 
