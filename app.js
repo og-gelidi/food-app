@@ -346,8 +346,19 @@ function calculateRecipeMatch(recipe) {
 
     const reqQty = reqIng.qty;
     const stockQty = stockIng ? stockIng.qty : 0;
+    const unitsMatch = stockIng && (stockIng.unit.trim().toLowerCase() === reqIng.unit.trim().toLowerCase());
+    
+    let isSatisfied = false;
+    if (stockIng) {
+      if (unitsMatch) {
+        isSatisfied = stockQty >= reqQty;
+      } else {
+        // Fallback for mismatched units (e.g. tins vs tbsp): if we have any quantity, assume satisfied
+        isSatisfied = stockQty > 0;
+      }
+    }
 
-    if (stockQty >= reqQty) {
+    if (isSatisfied) {
       matchesCount++;
     } else {
       // Calculate how short we are
@@ -418,6 +429,9 @@ function renderDashboard() {
     const { recipe, scoreInfo } = item;
     const missingCount = scoreInfo.missing.length;
 
+    const categories = recipe.categories || [recipe.category] || [];
+    const displayCategories = categories.map(c => formatCategoryName(c)).join(" & ");
+
     if (scoreInfo.isReady) {
       readyCount++;
       readyHtml += `
@@ -427,7 +441,7 @@ function renderDashboard() {
             <div class="rec-item-details">
               <span><i data-lucide="clock"></i> ${recipe.time}m</span>
               <span><i data-lucide="star" class="text-amber"></i> ${recipe.flavour}</span>
-              <span class="badge badge-category">${formatCategoryName(recipe.category)}</span>
+              <span class="badge badge-category">${displayCategories}</span>
             </div>
           </div>
           <span class="badge badge-ready">Ready to Cook</span>
@@ -470,7 +484,11 @@ function renderInventory() {
   const searchVal = document.getElementById("inventory-search").value.toLowerCase();
   const activeCategory = document.querySelector("#inventory-filters .filter-btn.active").getAttribute("data-category");
 
-  state.ingredients.forEach(ing => {
+  const sortedIngredients = [...state.ingredients].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+  );
+
+  sortedIngredients.forEach(ing => {
     // Filter logic
     if (searchVal && !ing.name.toLowerCase().includes(searchVal)) return;
     if (activeCategory !== "all" && ing.category !== activeCategory) return;
@@ -549,7 +567,8 @@ function renderRecipes() {
   state.recipes.forEach(recipe => {
     // Filter search
     if (searchVal && !recipe.name.toLowerCase().includes(searchVal)) return;
-    if (activeMealType !== "all" && recipe.category !== activeMealType) return;
+    const categories = recipe.categories || [recipe.category] || [];
+    if (activeMealType !== "all" && !categories.includes(activeMealType)) return;
 
     const scoreInfo = calculateRecipeMatch(recipe);
 
@@ -566,12 +585,14 @@ function renderRecipes() {
       distanceBadge = `<span class="badge badge-distance"><i data-lucide="shopping-cart"></i> +${scoreInfo.distance} Distance</span>`;
     }
 
+    const displayCategories = categories.map(c => formatCategoryName(c)).join(" & ");
+
     const card = document.createElement("div");
     card.className = "recipe-card";
     card.innerHTML = `
       <div class="recipe-card-header">
         <div class="recipe-header-title">
-          <span class="recipe-type">${formatCategoryName(recipe.category)}</span>
+          <span class="recipe-type">${displayCategories}</span>
           <span class="recipe-title">${recipe.name}</span>
         </div>
       </div>
@@ -853,7 +874,10 @@ function openRecipeModal(recipeId = null) {
     if (recipe) {
       document.getElementById("edit-recipe-id").value = recipe.id;
       document.getElementById("recipe-name").value = recipe.name;
-      document.getElementById("recipe-category").value = recipe.category;
+      const categories = recipe.categories || [recipe.category] || [];
+      document.querySelectorAll('input[name="recipe-category"]').forEach(cb => {
+        cb.checked = categories.includes(cb.value);
+      });
       document.getElementById("recipe-time").value = recipe.time;
       document.getElementById("recipe-flavour").value = recipe.flavour;
       document.getElementById("recipe-ease").value = recipe.ease;
@@ -867,6 +891,9 @@ function openRecipeModal(recipeId = null) {
     // Add Mode
     modalTitle.textContent = "Create New Recipe";
     document.getElementById("edit-recipe-id").value = "";
+    document.querySelectorAll('input[name="recipe-category"]').forEach(cb => {
+      cb.checked = false;
+    });
     // Seed with two blank rows
     addRecipeIngredientRow();
     addRecipeIngredientRow();
@@ -932,7 +959,12 @@ function handleRecipeSubmit(event) {
 
   const id = document.getElementById("edit-recipe-id").value;
   const name = document.getElementById("recipe-name").value.trim();
-  const category = document.getElementById("recipe-category").value;
+  const checkedCategories = Array.from(document.querySelectorAll('input[name="recipe-category"]:checked')).map(cb => cb.value);
+  if (checkedCategories.length === 0) {
+    showToast("Please select at least one meal category.", "error");
+    return;
+  }
+  const category = checkedCategories[0];
   const time = parseInt(document.getElementById("recipe-time").value);
   const flavour = parseFloat(document.getElementById("recipe-flavour").value);
   const ease = parseInt(document.getElementById("recipe-ease").value);
@@ -948,12 +980,16 @@ function handleRecipeSubmit(event) {
   const rows = document.querySelectorAll(".recipe-ingredient-row");
   
   rows.forEach(row => {
-    const rowId = row.id.split("-").pop();
-    const ingName = document.getElementById(`rec-ing-name-${rowId}`).value.trim();
-    const ingQty = parseFloat(document.getElementById(`rec-ing-qty-${rowId}`).value);
-    const ingUnit = document.getElementById(`rec-ing-unit-${rowId}`).value.trim();
+    const inputs = row.querySelectorAll("input");
+    const ingNameInput = row.querySelector(".ingredient-name-input");
+    const ingQtyInput = row.querySelector("input[type='number']");
+    const ingUnitInput = inputs[2]; // Third input is the unit
 
-    if (ingName && ingQty) {
+    const ingName = ingNameInput ? ingNameInput.value.trim() : "";
+    const ingQty = ingQtyInput ? parseFloat(ingQtyInput.value) : NaN;
+    const ingUnit = ingUnitInput ? ingUnitInput.value.trim() : "";
+
+    if (ingName && !isNaN(ingQty)) {
       ingredients.push({
         name: capitalizeWord(ingName),
         qty: ingQty,
@@ -973,6 +1009,7 @@ function handleRecipeSubmit(event) {
     if (rec) {
       rec.name = name;
       rec.category = category;
+      rec.categories = checkedCategories;
       rec.time = time;
       rec.flavour = flavour;
       rec.ease = ease;
@@ -987,6 +1024,7 @@ function handleRecipeSubmit(event) {
       id: "rec-" + Date.now(),
       name: name,
       category: category,
+      categories: checkedCategories,
       time: time,
       flavour: flavour,
       ease: ease,
@@ -1015,7 +1053,9 @@ function openRecipeDetailsModal(recipeId) {
 
   // View fields population
   document.getElementById("view-recipe-name").textContent = recipe.name;
-  document.getElementById("view-recipe-category").textContent = formatCategoryName(recipe.category);
+  const categories = recipe.categories || [recipe.category] || [];
+  const displayCategories = categories.map(c => formatCategoryName(c)).join(" & ");
+  document.getElementById("view-recipe-category").textContent = displayCategories;
   document.getElementById("view-recipe-time").textContent = `${recipe.time} mins`;
   
   // Star ratings representation
@@ -1040,7 +1080,16 @@ function openRecipeDetailsModal(recipeId) {
     );
 
     const stockQty = stockIng ? stockIng.qty : 0;
-    const isAvailable = stockQty >= reqIng.qty;
+    const unitsMatch = stockIng && (stockIng.unit.trim().toLowerCase() === reqIng.unit.trim().toLowerCase());
+    
+    let isAvailable = false;
+    if (stockIng) {
+      if (unitsMatch) {
+        isAvailable = stockQty >= reqIng.qty;
+      } else {
+        isAvailable = stockQty > 0;
+      }
+    }
 
     const li = document.createElement("li");
     if (isAvailable) {
@@ -1117,18 +1166,29 @@ function cookRecipe(recipeId) {
   }
 
   // Decrement inventory
+  let mismatchList = [];
   recipe.ingredients.forEach(reqIng => {
     const stockIng = state.ingredients.find(
       i => i.name.trim().toLowerCase() === reqIng.name.trim().toLowerCase()
     );
     if (stockIng) {
-      stockIng.qty = Math.max(0, parseFloat((stockIng.qty - reqIng.qty).toFixed(2)));
+      const unitsMatch = stockIng.unit.trim().toLowerCase() === reqIng.unit.trim().toLowerCase();
+      if (unitsMatch) {
+        stockIng.qty = Math.max(0, parseFloat((stockIng.qty - reqIng.qty).toFixed(2)));
+      } else {
+        mismatchList.push(stockIng.name);
+      }
     }
   });
 
   saveStateToLocalStorage();
   closeModal("modal-recipe-details");
-  showToast(`Successfully cooked ${recipe.name}! Ingredients decremented.`, "success");
+  
+  if (mismatchList.length > 0) {
+    showToast(`Successfully cooked ${recipe.name}! Note: Mismatched unit items (${mismatchList.join(", ")}) were not decremented automatically.`, "warning");
+  } else {
+    showToast(`Successfully cooked ${recipe.name}! Ingredients decremented.`, "success");
+  }
   
   // Refresh views
   const activeTab = document.querySelector(".nav-link.active").getAttribute("data-tab");
