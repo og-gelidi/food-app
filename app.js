@@ -503,30 +503,29 @@ function renderInventory() {
     const card = document.createElement("div");
     card.className = "inventory-card";
     card.innerHTML = `
-      <div class="ing-header">
-        <div>
-          <span class="ing-title">${ing.name}</span>
-          <br>
-          <span class="ing-category">${ing.category}</span>
-        </div>
-        <div class="difficulty-indicator">
-          <span class="badge ${diffClass}">Cost: ${diff}</span>
-        </div>
+      <div class="ing-col ing-col-info" style="flex: 2; min-width: 150px; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+        <span class="ing-title" style="font-size: 1.05rem; font-weight: 600; color: #fff;">${ing.name}</span>
+        <span class="ing-category" style="font-size: 0.7rem; color: var(--text-secondary); background: rgba(255, 255, 255, 0.04); padding: 0.15rem 0.5rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.02);">${ing.category}</span>
       </div>
       
-      ${expiryHtml}
-
-      <div class="ing-details">
-        <div class="ing-stock">
-          <span class="ing-stock-val">${ing.qty} ${ing.unit}</span>
-          <span class="ing-stock-label">IN PANTRY</span>
-        </div>
-        <div class="ing-controls">
-          <button class="btn-ctrl" onclick="adjustQty('${ing.id}', -1)" title="Decrease qty"><i data-lucide="minus"></i></button>
-          <button class="btn-ctrl" onclick="adjustQty('${ing.id}', 1)" title="Increase qty"><i data-lucide="plus"></i></button>
-          <button class="btn-ctrl" onclick="openIngredientModal('${ing.id}')" title="Edit Item"><i data-lucide="edit-3"></i></button>
-          <button class="btn-ctrl" onclick="deleteIngredient('${ing.id}')" title="Delete"><i data-lucide="trash-2"></i></button>
-        </div>
+      <div class="ing-col ing-col-difficulty" style="flex: 1; min-width: 90px; display: flex; align-items: center;">
+        <span class="badge ${diffClass}" style="margin: 0;">Cost: ${diff}</span>
+      </div>
+      
+      <div class="ing-col ing-col-expiry" style="flex: 1.5; min-width: 130px; display: flex; align-items: center;">
+        ${expiryHtml ? expiryHtml : '<span class="text-secondary" style="font-size: 0.8rem; opacity: 0.4;">—</span>'}
+      </div>
+      
+      <div class="ing-col ing-col-stock" style="flex: 1.2; min-width: 110px; display: flex; flex-direction: column; justify-content: center;">
+        <span class="ing-stock-val" style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; color: var(--color-cyan); line-height: 1.1;">${ing.qty} ${ing.unit}</span>
+        <span class="ing-stock-label" style="font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; tracking: 0.5px;">In Pantry</span>
+      </div>
+      
+      <div class="ing-col ing-col-actions" style="display: flex; gap: 0.5rem; justify-content: flex-end; align-items: center;">
+        <button class="btn-ctrl" onclick="adjustQty('${ing.id}', -1)" title="Decrease qty"><i data-lucide="minus"></i></button>
+        <button class="btn-ctrl" onclick="adjustQty('${ing.id}', 1)" title="Increase qty"><i data-lucide="plus"></i></button>
+        <button class="btn-ctrl" onclick="openIngredientModal('${ing.id}')" title="Edit Item"><i data-lucide="edit-3"></i></button>
+        <button class="btn-ctrl" onclick="deleteIngredient('${ing.id}')" title="Delete"><i data-lucide="trash-2"></i></button>
       </div>
     `;
     grid.appendChild(card);
