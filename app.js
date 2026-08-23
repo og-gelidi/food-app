@@ -236,6 +236,8 @@ function initEventHandlers() {
       e.preventDefault();
       const tabId = link.getAttribute("data-tab");
       switchTab(tabId);
+      const sidebar = document.querySelector(".sidebar");
+      if (sidebar) sidebar.classList.remove("open");
     });
   });
 
@@ -1755,6 +1757,16 @@ function updateSyncStatusUI(status, text) {
     textEl.style.color = "var(--color-cyan)";
   } else {
     textEl.style.color = "var(--text-secondary)";
+  }
+}
+
+/**
+ * Toggles overlay sidebar state on mobile viewports.
+ */
+function toggleSidebar() {
+  const sidebar = document.querySelector(".sidebar");
+  if (sidebar) {
+    sidebar.classList.toggle("open");
   }
 }
 

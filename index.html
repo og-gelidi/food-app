@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="style.css?v=1.5">
+  <link rel="stylesheet" href="style.css?v=1.6">
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Supabase JS CDN -->
@@ -63,8 +63,11 @@
     <!-- Main Content Area -->
     <main class="main-content">
       <!-- Top header bar -->
-      <header class="top-header">
-        <h1 class="page-title" id="page-title-text">Dashboard</h1>
+      <header class="top-header" style="display: flex; align-items: center; gap: 0.75rem;">
+        <button class="btn btn-secondary btn-menu-toggle" id="btn-menu-toggle" style="display: none; padding: 0.5rem; justify-content: center; align-items: center;" onclick="toggleSidebar()">
+          <i data-lucide="menu"></i>
+        </button>
+        <h1 class="page-title" id="page-title-text" style="flex: 1; margin: 0;">Dashboard</h1>
         <div class="header-actions">
           <button class="btn btn-primary btn-add-inventory" id="header-action-btn">
             <i data-lucide="plus"></i>
@@ -252,7 +255,7 @@
 
       <!-- TAB 5: CLOUD SYNC -->
       <section id="tab-cloud-sync" class="tab-pane">
-        <div class="sync-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+        <div class="sync-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
           <!-- Left side: Sync Configuration -->
           <div class="card sync-config-card">
             <h3 style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;"><i data-lucide="settings" class="icon-violet"></i> Cloud Database Setup</h3>
@@ -575,6 +578,6 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Application Logic -->
-  <script src="app.js?v=1.5"></script>
+  <script src="app.js?v=1.6"></script>
 </body>
 </html>
