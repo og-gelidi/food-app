@@ -1141,6 +1141,14 @@ function openRecipeDetailsModal(recipeId) {
     footer.insertBefore(cookBtn, footer.firstChild);
   }
 
+  // Delete action binding
+  const deleteBtn = document.getElementById("btn-delete-recipe-action");
+  if (deleteBtn) {
+    deleteBtn.onclick = () => {
+      deleteRecipe(recipe.id);
+    };
+  }
+
   // Edit action binding
   const editBtn = document.getElementById("btn-edit-recipe-action");
   editBtn.onclick = () => {
@@ -1150,6 +1158,25 @@ function openRecipeDetailsModal(recipeId) {
 
   openModal("modal-recipe-details");
   lucide.createIcons();
+}
+
+/**
+ * Deletes a recipe from local state and triggers save/sync.
+ */
+function deleteRecipe(recipeId) {
+  const recipe = state.recipes.find(r => r.id === recipeId);
+  if (!recipe) return;
+
+  if (confirm(`Are you sure you want to delete the recipe "${recipe.name}"? This cannot be undone.`)) {
+    state.recipes = state.recipes.filter(r => r.id !== recipeId);
+    saveStateToLocalStorage();
+    closeModal("modal-recipe-details");
+    showToast(`Deleted recipe "${recipe.name}"`, "error");
+    
+    // Refresh current UI view
+    const activeTab = document.querySelector(".nav-link.active").getAttribute("data-tab");
+    switchTab(activeTab);
+  }
 }
 
 /**
@@ -1233,6 +1260,8 @@ function formatCategoryName(cat) {
   if (cat === "packed_lunch") return "Packed Lunch";
   if (cat === "snack") return "Snacks";
   if (cat === "long_multiday") return "Long / Multi-day";
+  if (cat === "dessert") return "Dessert";
+  if (cat === "beverage") return "Beverage";
   return cat;
 }
 
