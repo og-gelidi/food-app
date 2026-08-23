@@ -282,6 +282,10 @@ body::after {
   border: 1px solid transparent;
 }
 
+#btn-menu-toggle {
+  display: none;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, var(--color-primary), #7c3aed);
   color: #fff;
@@ -1443,6 +1447,12 @@ body::after {
   }
   .top-header {
     padding: 0.5rem 0.25rem 1rem 0.25rem;
+  }
+  #btn-menu-toggle {
+    display: inline-flex !important;
+    padding: 0.5rem;
+    justify-content: center;
+    align-items: center;
   }
   /* Mobile scale-down icons */
   svg, [data-lucide] {
